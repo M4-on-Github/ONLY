@@ -19,7 +19,6 @@ einops-exts
 timm
 contexttimer
 decord
-diffusers
 fairscale
 ftfy
 iopath

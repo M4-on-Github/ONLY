@@ -1,0 +1,42 @@
+**/__pycache__/
+*.py[cod]
+*.pyo
+
+# Shipwreck dataset (large; transferred separately to cluster)
+CASTOR/shipwreck_wiki_images/sorted_images/
+
+# LLaVA editable-install artifacts (installed via pip install -e experiments/llava)
+experiments/llava/llava/
+experiments/llava/*.egg-info/
+
+# Model weights and containers
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.sif
+*.sif.def.sha256
+
+# Inference results (written to /data/$USER/castor_results/ on cluster)
+answers_*.jsonl
+castor_results/
+
+# HuggingFace / torch cache
+.cache/
+
+# SLURM logs
+logs/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
+
+# Internal task tracking
+todo.md
+plan.md

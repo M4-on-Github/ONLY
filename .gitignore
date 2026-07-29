@@ -2,8 +2,8 @@
 *.py[cod]
 *.pyo
 
-# Shipwreck dataset (large; transferred separately to cluster)
-CASTOR/shipwreck_wiki_images/sorted_images/
+# Shipwreck dataset (now lives in benchybench/shipwreck_wiki_images/)
+CASTOR/shipwreck_wiki_images/
 
 # LLaVA editable-install artifacts (installed via pip install -e experiments/llava)
 experiments/llava/llava/

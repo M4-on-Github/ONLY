@@ -89,7 +89,7 @@ echo "[$(date)] Container Python: $PYTHON"
 #   both modes (default) → even task ID = baseline, odd = ONLY (same prompt)
 #   one mode specified   → task ID maps directly to prompt index
 PROMPTS_DIR="$REPO/CASTOR/prompts"
-IMAGE_DIR="$REPO/CASTOR/shipwreck_wiki_images/sorted_images"
+IMAGE_DIR="$(dirname $REPO)/shipwreck_wiki_images/sorted_images"
 
 PROMPT_FILES=( "$PROMPTS_DIR"/*.txt )
 N_PROMPTS=${#PROMPT_FILES[@]}

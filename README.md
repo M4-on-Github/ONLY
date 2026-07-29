@@ -102,4 +102,48 @@ tail -f /data/$USER/logs/castor_<ARRAYJOBID>_<TASKID>.out
 
 Results land in `/data/$USER/castor_results/answers_{mode}[_{run_name}].jsonl`. Runs are resumable — resubmitting skips already-written lines.
 
-See `CLAUDE.md` for full architecture details, cluster storage layout, hyperparameter reference, and the container build process.
+### Pipeline Architecture
+
+```
+CASTOR/submit.sh                  (creates log dir, counts prompts, calls sbatch)
+  └─ sbatch CASTOR/submit_job.sh  (SLURM array: one task per prompt × mode)
+       ├─ builds/reuses castor_only.sif (hashed against container.def)
+       ├─ runs prepare_dataset.py  (builds per-prompt questions.jsonl)
+       └─ apptainer exec → run_inference.py
+            ├─ loads LLaVA-1.5-7B  (experiments/llava/ — vendored, not pip)
+            └─ per image: forward pass → contrast layer → TVD-gated decoding
+```
+
+The ONLY method lives in `only_utils/only_sample.py`, which monkey-patches
+`GenerationMixin.sample` at import time. On each token step it compares full-model
+logits against a single suppressed-layer contrast forward pass, then applies an
+adaptive plausibility mask (`ritual_beta`) before sampling.
+
+### Key Parameters
+
+| Parameter | Default | Meaning |
+|-----------|---------|---------|
+| `enhance_layer_index` | 0 | Layer to suppress for the contrast pass |
+| `js_gamma` | 0.2 | TVD threshold: additive (low) vs. subtractive (high) branch |
+| `ritual_alpha_pos` | 3.0 | Scale factor for the additive branch |
+| `ritual_alpha_neg` | 1.0 | Scale factor for the subtractive branch |
+| `ritual_beta` | 0.1 | Adaptive plausibility cutoff |
+
+All parameters live in `CASTOR/config.json` and are overridable via CLI flags.
+
+### Hard Constraints
+
+- **Never upgrade pinned packages** — `transformers==4.31.0`, `torch==2.0.1`, `peft==0.4.0`, `bitsandbytes==0.41.0`. These are interdependent.
+- `experiments/llava/` is the vendored LLaVA source — `run_inference.py` inserts it into `sys.path`; there is no `pip install llava`.
+- `transformers/` is a patched fork (installed via `pip install -e transformers`); do not replace with the upstream package.
+- `$USER` in config paths is expanded at runtime — never hardcode a username.
+
+### Cluster Storage
+
+| What | Path |
+|------|------|
+| LLaVA-1.5-7B weights | `/data/$USER/llava-v1.5-7b/` |
+| Apptainer container | `/data/$USER/castor_only.sif` |
+| HF cache | `/data/$USER/.cache/huggingface/` |
+| Results | `/data/$USER/castor_results/` |
+| Logs | `/data/$USER/logs/` |

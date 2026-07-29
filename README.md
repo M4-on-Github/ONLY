@@ -107,7 +107,7 @@ Results land in `/data/$USER/castor_results/answers_{mode}[_{run_name}].jsonl`. 
 ```
 CASTOR/submit.sh                  (creates log dir, counts prompts, calls sbatch)
   └─ sbatch CASTOR/submit_job.sh  (SLURM array: one task per prompt × mode)
-       ├─ builds/reuses castor_only.sif (hashed against container.def)
+       ├─ builds/reuses castor_ONLY.sif (hashed against container.def)
        ├─ runs prepare_dataset.py  (builds per-prompt questions.jsonl)
        └─ apptainer exec → run_inference.py
             ├─ loads LLaVA-1.5-7B  (experiments/llava/ — vendored, not pip)
@@ -143,7 +143,7 @@ All parameters live in `CASTOR/config.json` and are overridable via CLI flags.
 | What | Path |
 |------|------|
 | LLaVA-1.5-7B weights | `/data/$USER/llava-v1.5-7b/` |
-| Apptainer container | `/data/$USER/castor_only.sif` |
+| Apptainer container | `/data/$USER/castor_ONLY.sif` |
 | HF cache | `/data/$USER/.cache/huggingface/` |
 | Results | `/data/$USER/castor_results/` |
 | Logs | `/data/$USER/logs/` |

@@ -70,6 +70,12 @@ try:
 except ImportError:
     pass
 
+# Vendored transformers must be on sys.path before `import transformers` so that
+# Python loads the custom LlamaModel (which accepts use_only/enhance_layer_index)
+# rather than the stock one from the container's /opt/conda site-packages.
+_REPO_EARLY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(_REPO_EARLY, "transformers", "src"))
+
 try:
     import transformers
     for _name in ("Cache", "DynamicCache", "EncoderDecoderCache",

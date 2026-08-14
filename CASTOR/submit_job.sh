@@ -5,7 +5,7 @@
 # Do NOT call this file directly with sbatch — use CASTOR/submit.sh instead.
 # submit.sh creates /data/$USER/logs/ before sbatch opens the log file.
 #
-# Submit from ~/ONLY/:
+# Submit from ~/BenchyBench/ONLY/:
 #   bash CASTOR/submit.sh                                          # → answers_baseline.jsonl
 #   bash CASTOR/submit.sh --use-only                              # → answers_only.jsonl
 #   bash CASTOR/submit.sh --use-only --run-name layer2_g025       # → answers_only_layer2_g025.jsonl
@@ -16,9 +16,9 @@
 #
 # Interactive debug:
 #   srun -p pleiades --time=1:00:00 --cpus-per-task=4 --gres=gpu:1 --mem=40G --constraint=RTX6000ADA --pty bash
-#   cd ~/ONLY
+#   cd ~/BenchyBench/ONLY
 #   apptainer exec --containall --nv \
-#       --bind /data/$USER:/data/$USER --bind ~/ONLY:~/ONLY --bind ~/ONLY:/ONLY --bind /tmp:/tmp \
+#       --bind /data/$USER:/data/$USER --bind ~/BenchyBench/ONLY:~/BenchyBench/ONLY --bind ~/BenchyBench/ONLY:/ONLY --bind /tmp:/tmp \
 #       /data/$USER/castor_ONLY.sif /opt/conda/bin/python3 CASTOR/run_inference.py --use-only
 # ─────────────────────────────────────────────────────────────────────────────
 #SBATCH -p pleiades

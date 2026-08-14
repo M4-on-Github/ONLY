@@ -1,5 +1,19 @@
 # ONLY CASTOR — Spec
 
+> **Note on image paths (2026-08-14).** This spec was written while ONLY was a
+> standalone checkout at `~/ONLY`, and it describes images living inside the
+> repo at `CASTOR/shipwreck_wiki_images/`. That is no longer the layout. ONLY is
+> now a submodule of BenchyBench, and the image set is a single shared copy at
+> the BenchyBench root:
+>
+> ```
+> ~/BenchyBench/shipwreck_wiki_images/sorted_images/
+> ```
+>
+> Paths are resolved at runtime by `CASTOR/benchybench_paths.sh`; nothing needs
+> to be symlinked or copied into this repo. See `CASTOR/README.md` for current
+> usage. The design intent below is otherwise unchanged.
+
 Port the CASTOR shipwreck inference pipeline from DeGF to ONLY, replacing
 DeGF's diffusion-based contrastive decoding with ONLY's single-layer
 intervention. Remove all benchmark eval infrastructure that is irrelevant
@@ -44,9 +58,9 @@ tail -f /data/$USER/logs/castor_<ARRAYJOBID>_<TASKID>.out
 srun -p pleiades --time=1:00:00 --cpus-per-task=4 --gpus=1 \
      --mem=40G --constraint=RTX6000ADA --pty bash
 # inside the node:
-cd ~/ONLY
+cd ~/BenchyBench/ONLY
 apptainer exec --containall --nv \
-    --bind /data/$USER:/data/$USER --bind ~/ONLY:~/ONLY --bind /tmp:/tmp \
+    --bind /data/$USER:/data/$USER --bind ~/BenchyBench/ONLY:~/BenchyBench/ONLY --bind /tmp:/tmp \
     /data/$USER/castor_only.sif \
     /opt/conda/bin/python3 CASTOR/run_inference.py --use-only
 ```

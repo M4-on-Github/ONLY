@@ -3,7 +3,7 @@
 # log file, counts prompts, and submits one array task per (prompt × mode) pair
 # so everything runs in parallel — each task gets its own GPU allocation.
 #
-# Usage (from ~/ONLY/):
+# Usage (from ~/BenchyBench/ONLY/):
 #   bash CASTOR/submit.sh                    # N prompts × 2 modes = 2N tasks
 #   bash CASTOR/submit.sh --use-only         # N tasks, ONLY mode only
 #   bash CASTOR/submit.sh --no-only          # N tasks, baseline only

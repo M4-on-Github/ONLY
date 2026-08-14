@@ -80,7 +80,7 @@ srun -p pleiades --time=1:00:00 --cpus-per-task=4 --gpus=1 --mem=40G --constrain
 
 ### Running CASTOR Inference
 
-From `~/ONLY/` on the cluster:
+From `~/BenchyBench/ONLY/` on the cluster:
 
 ```bash
 # Full sweep — ONLY method + baseline, all prompts

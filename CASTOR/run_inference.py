@@ -98,7 +98,13 @@ print(f"Device     : {_gpu.name}  ({_gpu.total_memory // 1024**2} MiB)", flush=T
 # ── Path setup ────────────────────────────────────────────────────────────────
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _REPO = os.path.dirname(_HERE)
+sys.path.insert(0, _HERE)                              # run_config.py
 sys.path.insert(0, _REPO)                              # only_utils/
+
+# Config handling lives in its own module so it can be tested without the
+# vendored LLaVA stack, which pins transformers==4.31.0 and only imports
+# inside the container.
+from run_config import RunConfig
 sys.path.insert(0, os.path.join(_REPO, "experiments")) # llava/
 
 # ── Project imports ───────────────────────────────────────────────────────────
@@ -313,9 +319,24 @@ def run(cfg: dict):
 
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Argparse destinations that may override config.json. Declared as data rather
+# than as a wall of near-identical if-statements, so adding a flag means adding
+# a name here instead of another line that is easy to mistype or omit.
+# The merge itself lives in run_config.py, which imports nothing beyond the
+# standard library and is therefore testable outside the container.
+_CFG_PATH_KEYS = (
+    "model_path", "model_base", "image_folder", "question_file", "answers_file",
+)
+_CFG_HP_KEYS = (
+    "conv_mode", "use_only", "enhance_layer_index", "js_gamma",
+    "ritual_alpha_pos", "ritual_alpha_neg", "ritual_beta",
+    "temperature", "top_p", "top_k", "seed", "max_new_tokens",
+)
+
+
 def _load_config(path: str) -> dict:
-    with open(path, encoding="utf-8") as f:
-        return json.load(f)
+    """Load config.json. Facade over RunConfig.load()."""
+    return RunConfig.load(path).to_dict()
 
 
 def _make_answers_path(cfg: dict, run_name, model_tag: str = "llava") -> str:
@@ -327,28 +348,12 @@ def _make_answers_path(cfg: dict, run_name, model_tag: str = "llava") -> str:
 
 
 def _merge(cfg: dict, args) -> dict:
-    """Apply any explicitly-set CLI args over the config."""
-    p  = cfg["paths"]
-    hp = cfg["hyperparameters"]
+    """Apply any explicitly-set CLI args over the config.
 
-    if args.model_path    is not None: p["model_path"]    = args.model_path
-    if args.model_base    is not None: p["model_base"]    = args.model_base
-    if args.image_folder  is not None: p["image_folder"]  = args.image_folder
-    if args.question_file is not None: p["question_file"] = args.question_file
-    if args.answers_file  is not None: p["answers_file"]  = args.answers_file
-
-    if args.conv_mode          is not None: hp["conv_mode"]          = args.conv_mode
-    if args.use_only           is not None: hp["use_only"]           = args.use_only
-    if args.enhance_layer_index is not None: hp["enhance_layer_index"] = args.enhance_layer_index
-    if args.js_gamma           is not None: hp["js_gamma"]           = args.js_gamma
-    if args.ritual_alpha_pos   is not None: hp["ritual_alpha_pos"]   = args.ritual_alpha_pos
-    if args.ritual_alpha_neg   is not None: hp["ritual_alpha_neg"]   = args.ritual_alpha_neg
-    if args.ritual_beta        is not None: hp["ritual_beta"]        = args.ritual_beta
-    if args.temperature        is not None: hp["temperature"]        = args.temperature
-    if args.top_p              is not None: hp["top_p"]              = args.top_p
-    if args.top_k              is not None: hp["top_k"]              = args.top_k
-    if args.seed               is not None: hp["seed"]               = args.seed
-    if args.max_new_tokens     is not None: hp["max_new_tokens"]     = args.max_new_tokens
+    Only arguments that are not None are applied, so argparse defaults never
+    silently beat config.json. See run_config.RunConfig.apply_overrides().
+    """
+    RunConfig(cfg).apply_overrides(args, _CFG_PATH_KEYS, _CFG_HP_KEYS)
 
     return cfg
 

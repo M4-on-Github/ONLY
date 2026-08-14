@@ -71,6 +71,10 @@ from transformers.generation.stopping_criteria import (
 )
 import transformers
 from transformers.generation.utils import SampleOutput
+
+from only_utils.contrast_strategies import (
+    RitualContrast, VCDContrast, M3IDContrast, ONLYContrast,
+)
 import torch.nn.functional as F
 
 
@@ -250,7 +254,13 @@ def sample(
                 # print(torch.topk(next_token_logits, k=6, dim=-1))
                 # print(torch.topk(next_token_logits_cd, k=6, dim=-1))
 
-                tvd = torch.sum(torch.abs(nn.functional.softmax(next_token_logits, dim=-1) - nn.functional.softmax(next_token_logits_cd, dim=-1)))
+                # Delegated to only_utils.contrast_strategies, where the gate
+                # metric is a class covered by numerical-equivalence tests
+                # (BenchyBench/tests/test_contrast_strategies.py asserts it
+                # reproduces this expression bitwise). Note it is the L1
+                # distance — twice the conventional TVD — and js_gamma is
+                # calibrated to that scale.
+                tvd = ONLYContrast.total_variation_distance(next_token_logits, next_token_logits_cd)
                 # next_token_logits_topk = next_token_logits.topk(1000, dim=-1).values.to(torch.float64)
                 # next_token_logits_cd_topk = next_token_logits_cd.topk(1000, dim=-1).values.to(torch.float64)
                 # M = 0.5 * (nn.functional.softmax(next_token_logits_topk, dim=-1) + nn.functional.softmax(next_token_logits_cd_topk, dim=-1)) + 1e-6

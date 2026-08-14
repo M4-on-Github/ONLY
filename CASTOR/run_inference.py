@@ -339,8 +339,32 @@ def _load_config(path: str) -> dict:
     return RunConfig.load(path).to_dict()
 
 
+class AnswersPath:
+    """Builds the output filename, encoding the run's identity into it.
+
+    The name carries model, decoding mode and optional run tag:
+
+        answers_llava_only_exp1.jsonl
+
+    That is not cosmetic. Eval_CASTOR infers whether a run used a mitigation
+    method FROM ITS FILENAME (shared/loaders.used_diffusion, and the mode tag
+    here), so a run written without its mode tag is silently mis-classified
+    downstream and compared against the wrong baseline.
+
+    It also keeps a baseline and an ONLY run of the same prompt from
+    overwriting each other — they differ only in the mode tag, and without it
+    the second run would replace the first with no warning.
+    """
+
+    BASELINE = "baseline"
+    ONLY = "only"
+
+
 def _make_answers_path(cfg: dict, run_name, model_tag: str = "llava") -> str:
-    """Return the auto-suffixed answers file path: base_{model_tag}_{mode}[_{run_name}].ext"""
+    """Return the auto-suffixed answers file path: base_{model_tag}_{mode}[_{run_name}].ext
+
+    See AnswersPath for why the mode tag is load-bearing rather than cosmetic.
+    """
     base, ext = os.path.splitext(cfg["paths"]["answers_file"])
     mode_tag = "only" if cfg["hyperparameters"]["use_only"] else "baseline"
     name_tag = f"_{run_name}" if run_name else ""

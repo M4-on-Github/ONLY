@@ -1,56 +1,3 @@
-"""ONLY decoding — monkey-patched replacements for HuggingFace generation.
-
-Implements "ONLY: One-Layer Intervention Sufficiently Mitigates Hallucinations
-in Large Vision-Language Models" (ICCV 2025).
-
-HOW IT IS INSTALLED
-    evolve_only_sampling() overwrites GenerationMixin.sample and
-    greedy_search on the transformers module itself. The patch is global and
-    permanent for the process. Baseline behaviour is preserved because no
-    contrast branch activates unless the corresponding flag is set in
-    model_kwargs.
-
-    transformers is pinned to 4.31.0 for the same reason as DeGF: these are
-    copies of that version's generation functions with a contrast block
-    inserted.
-
-WHY IT IS CHEAPER THAN DeGF — THE KEY DIFFERENCE
-    DeGF runs the model twice per token and additionally generates a Stable
-    Diffusion reference image. ONLY runs it ONCE:
-
-        outputs, logits_cd = self(**model_inputs, ...)
-
-    A single forward pass returns two logit streams — the normal output plus a
-    second derived from intervening on one transformer layer. No second image,
-    no second pass, no diffusion model in memory. That is the paper's
-    efficiency claim, and it is visible right here in the call signature.
-
-THE GATE — NOTE THE NAMING
-    Like DeGF, the correction switches direction per token based on how far
-    apart the two distributions are. Unlike DeGF, the distance is TOTAL
-    VARIATION DISTANCE, not Jensen-Shannon:
-
-        tvd = sum(|softmax(logits) - softmax(logits_cd)|)
-
-    The threshold it is compared against is nevertheless named `js_gamma`,
-    carried over from the JS-based formulation. The commented-out JS
-    computation is still present below. The variable name does not describe
-    the metric in use — worth knowing before tuning it.
-
-        tvd <  js_gamma   streams agree    -> ADD the second stream
-        tvd >= js_gamma   streams disagree -> SUBTRACT it (contrastive)
-
-HYPERPARAMETERS (config.json / CLI)
-    enhance_layer_index  which layer is intervened on
-    js_gamma             the TVD gate threshold, despite the name
-    ritual_alpha_pos     weight when adding
-    ritual_alpha_neg     weight when subtracting
-    ritual_beta          adaptive plausibility cutoff
-
-CAUTION — this file determines published numbers. Its arithmetic is not
-routine refactoring material; see BenchyBench/PIPELINES.md for the prerequisite
-before changing it.
-"""
 import copy
 import inspect
 import warnings
@@ -71,10 +18,6 @@ from transformers.generation.stopping_criteria import (
 )
 import transformers
 from transformers.generation.utils import SampleOutput
-
-from only_utils.contrast_strategies import (
-    RitualContrast, VCDContrast, M3IDContrast, ONLYContrast,
-)
 import torch.nn.functional as F
 
 
@@ -254,13 +197,7 @@ def sample(
                 # print(torch.topk(next_token_logits, k=6, dim=-1))
                 # print(torch.topk(next_token_logits_cd, k=6, dim=-1))
 
-                # Delegated to only_utils.contrast_strategies, where the gate
-                # metric is a class covered by numerical-equivalence tests
-                # (BenchyBench/tests/test_contrast_strategies.py asserts it
-                # reproduces this expression bitwise). Note it is the L1
-                # distance — twice the conventional TVD — and js_gamma is
-                # calibrated to that scale.
-                tvd = ONLYContrast.total_variation_distance(next_token_logits, next_token_logits_cd)
+                tvd = torch.sum(torch.abs(nn.functional.softmax(next_token_logits, dim=-1) - nn.functional.softmax(next_token_logits_cd, dim=-1)))
                 # next_token_logits_topk = next_token_logits.topk(1000, dim=-1).values.to(torch.float64)
                 # next_token_logits_cd_topk = next_token_logits_cd.topk(1000, dim=-1).values.to(torch.float64)
                 # M = 0.5 * (nn.functional.softmax(next_token_logits_topk, dim=-1) + nn.functional.softmax(next_token_logits_cd_topk, dim=-1)) + 1e-6
@@ -280,11 +217,6 @@ def sample(
                 # import ipdb; ipdb.set_trace()
 
 
-                # The gate. Low distance means the intervened stream agrees, so
-                # its evidence is ADDED; high distance means it disagrees, so
-                # it is SUBTRACTED. Same per-token sign switch as DeGF, but
-                # driven by TVD rather than JS — and `js_gamma` is the
-                # threshold's name, not its metric.
                 if tvd < js_gamma:
                     # print('++++++++++')
                     diffs = next_token_logits + ritual_alpha_pos * next_token_logits_cd
